@@ -27,7 +27,8 @@
       <button onclick="pause()" id="pausebtn">Stop</button>
 
       <p id="result"></p>
-    
+      <p id="result1"></p>
+      <p id="result2"></p>
     </div>
 
     <script
@@ -66,12 +67,24 @@
       }
 
       function play() {
-        source1.connect(context.destination);
-        source1.start(0);
-        $("#result").text(`Base latency: ${context.baseLatency}`)
-        console.log("The base latency", context.baseLatency);
-        console.log("The output latency", context.outputLatency);
 
+
+        // source1.connect(context.destination);
+        // source1.start(0);
+        // let ts = context.getOutputTimestamp();
+        // $("#result").text(`Base latency: ${context.baseLatency}`)
+        // $("#result1").text(`Context time: ${ts.contextTime}`)
+        // $("#result2").text(`Performance time: ${ts.performanceTime}`)
+
+              context.audioWorklet.addModule("bypass-processor.js").then(_ => {
+                const bypasser = new AudioWorkletNode(context, 'bypass-processor');
+                source1.connect(bypasser).connect(context.destination);
+                source1.start(0);
+                let ts = context.getOutputTimestamp();
+                $("#result").text(`Worklet : Base latency: ${context.baseLatency}`)
+                $("#result1").text(`Worklet: Context time: ${ts.contextTime}`)
+                $("#result2").text(`Worklet: Performance time: ${ts.performanceTime}`)
+          });
       }
 
       //   audio.addEventListener("play", () => {
@@ -81,26 +94,10 @@
       //     // let ts = context.getOutputTimestamp()
       //     // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
 
-      //     context.audioWorklet.addModule("bypass-processor.js").then(_ => {
-      //       // const oscillator = new OscillatorNode(context);
-      //       // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
-      //       // oscillator.connect(bypasser).connect(context.destination);
-      //       // oscillator.start();
-      //       //audio.play();
-      //       // const track = context.createMediaElementSource(audio);
-      //       // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
-      //       // track.connect(bypasser).connect(context.destination);
-      //       // let ts = context.getOutputTimestamp()
-      //       // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
-      //     });
-      //   });
+
 
       function pause() {
-        g.gain.exponentialRampToValueAtTime(
-          0.00001,
-          context.currentTime + 0.04
-        );
-        // o.stop(0);
+        source1.stop(0);
       }
     </script>
   </body>
