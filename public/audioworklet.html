@@ -1,0 +1,72 @@
+<html>
+
+<head>
+    <title>Sine wave audio with Audio worklet</title>
+    <base href="/" />
+</head>
+
+<body>
+    <button onclick="play()" id="playbtn">Play</button>
+    <audio id="audio" controls onplay="playerStarted()" ontimeupdate="timeupdate(this)">
+       
+        <source src="./50910__rutgermuller__in-car-driving.wav" >
+      Your browser does not support the audio element.
+      </audio>
+    <button onclick="pause()" id="pausebtn">Stop</button>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script>
+        function timeupdate(e) {
+            console.log("updated time");
+            console.log(e.currentTime);
+        }
+
+        function playerStarted(e) {
+            console.log("player started");
+        }
+        var context = new AudioContext();
+
+        var audio = document.getElementById('audio');
+
+        audio.addEventListener('play', () => {
+
+            const track = context.createMediaElementSource(audio);
+            track.connect(context.destination);
+
+            let ts = context.getOutputTimestamp()
+            console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
+
+
+            context.audioWorklet.addModule('bypass-processor.js')
+                .then(_ => {
+                    // const oscillator = new OscillatorNode(context);
+                    // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
+                    // oscillator.connect(bypasser).connect(context.destination);
+                    // oscillator.start();
+                    //audio.play();
+
+                    // const track = context.createMediaElementSource(audio);
+                    // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
+                    // track.connect(bypasser).connect(context.destination);
+                    // let ts = context.getOutputTimestamp()
+                    // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
+
+
+                })
+
+        })
+
+        function play() {
+            audio.play();
+
+        }
+
+        function pause() {
+            g.gain.exponentialRampToValueAtTime(
+                    0.00001, context.currentTime + 0.04
+                )
+                // o.stop(0);
+        }
+    </script>
+</body>
+
+</html>
