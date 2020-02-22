@@ -1,118 +1,107 @@
 <html>
-
-<head>
+  <head>
     <title>Sine wave audio with Audio worklet</title>
     <!-- <base href="/" /> -->
     <style>
-        #buttons-container {
-            position: absolute;
-            top: 100px;
-            left: 100px;
-        }
+      #buttons-container {
+        position: absolute;
+        top: 100px;
+        left: 100px;
+      }
 
-        button {
-            width: 100px;
-            height: 50px
-        }
+      button {
+        width: 100px;
+        height: 50px;
+      }
     </style>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <div id="buttons-container">
-        <button onclick="play()" id="playbtn">Play</button>
-        <!-- <audio id="audio" controls onplay="playerStarted()" ontimeupdate="timeupdate(this)">
+      <button onclick="play()" id="playbtn">Play</button>
+      <!-- <audio id="audio" controls onplay="playerStarted()" ontimeupdate="timeupdate(this)">
 
             <source src="./50910__rutgermuller__in-car-driving.wav">
             Your browser does not support the audio element.
         </audio> -->
-        <button onclick="pause()" id="pausebtn">Stop</button>
+      <button onclick="pause()" id="pausebtn">Stop</button>
 
+      <p id="result"></p>
+    
     </div>
 
-
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
-        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-        <script src="./buffer.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.min.js"
+      integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+      crossorigin="anonymous"
+    ></script>
+    <script src="./buffer.js"></script>
     <script>
-        function timeupdate(e) {
-            console.log("updated time");
-            console.log(e.currentTime);
-        }
+      function timeupdate(e) {
+        console.log("updated time");
+        console.log(e.currentTime);
+      }
 
-        function playerStarted(e) {
-            console.log("player started");
-        }
-        var context = new (window.AudioContext || window.webkitAudioContext)();
-        var bufferLoader;
+      function playerStarted(e) {
+        console.log("player started");
+      }
+      var context = new (window.AudioContext || window.webkitAudioContext)();
+      var bufferLoader;
 
-        var audio = document.getElementById('audio');
+      var audio = document.getElementById("audio");
 
-        bufferLoader = new BufferLoader(
-            context,
-            [
-                './50910__rutgermuller__in-car-driving.wav'
-            ],
-            finishedLoading
+      bufferLoader = new BufferLoader(
+        context,
+        ["./50910__rutgermuller__in-car-driving.wav"],
+        finishedLoading
+      );
+
+      bufferLoader.load();
+
+      var source1;
+
+      function finishedLoading(bufferList) {
+        source1 = context.createBufferSource();
+        source1.buffer = bufferList[0];
+      }
+
+      function play() {
+        source1.connect(context.destination);
+        source1.start(0);
+        $("#result").text(`Base latency: ${context.baseLatency}`)
+        console.log("The base latency", context.baseLatency);
+        console.log("The output latency", context.outputLatency);
+
+      }
+
+      //   audio.addEventListener("play", () => {
+      //     const track = context.createMediaElementSource(audio);
+      //     track.connect(context.destination);
+
+      //     // let ts = context.getOutputTimestamp()
+      //     // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
+
+      //     context.audioWorklet.addModule("bypass-processor.js").then(_ => {
+      //       // const oscillator = new OscillatorNode(context);
+      //       // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
+      //       // oscillator.connect(bypasser).connect(context.destination);
+      //       // oscillator.start();
+      //       //audio.play();
+      //       // const track = context.createMediaElementSource(audio);
+      //       // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
+      //       // track.connect(bypasser).connect(context.destination);
+      //       // let ts = context.getOutputTimestamp()
+      //       // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
+      //     });
+      //   });
+
+      function pause() {
+        g.gain.exponentialRampToValueAtTime(
+          0.00001,
+          context.currentTime + 0.04
         );
-
-        bufferLoader.load();
-
-        var source1;
-
-        function finishedLoading(bufferList) {
-
-            source1 = context.createBufferSource();
-
-            source1.buffer = bufferList[0];
-
-            source1.connect(context.destination);
-
-        }
-
-        function play() {
-            //audio.play();
-            source1.start(0);
-
-        }
-
-
-        audio.addEventListener('play', () => {
-
-            const track = context.createMediaElementSource(audio);
-            track.connect(context.destination);
-
-            // let ts = context.getOutputTimestamp()
-            // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
-
-
-            context.audioWorklet.addModule('bypass-processor.js')
-                .then(_ => {
-                    // const oscillator = new OscillatorNode(context);
-                    // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
-                    // oscillator.connect(bypasser).connect(context.destination);
-                    // oscillator.start();
-                    //audio.play();
-
-                    // const track = context.createMediaElementSource(audio);
-                    // const bypasser = new AudioWorkletNode(context, 'bypass-processor');
-                    // track.connect(bypasser).connect(context.destination);
-                    // let ts = context.getOutputTimestamp()
-                    // console.log('Context time: ' + ts.contextTime + ' | Performance time: ' + ts.performanceTime);
-
-
-                })
-
-        })
-
-       
-        function pause() {
-            g.gain.exponentialRampToValueAtTime(
-                0.00001, context.currentTime + 0.04
-            )
-            // o.stop(0);
-        }
+        // o.stop(0);
+      }
     </script>
-</body>
-
+  </body>
 </html>
