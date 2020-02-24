@@ -53,23 +53,12 @@
         getData();
 
        
-
         audioCtx.audioWorklet.addModule('./noise-generator.js').then(() => {
-        // let modulator = new OscillatorNode(audioCtx);
-        let modGain = new GainNode(audioCtx);
-        let noiseGenerator = new AudioWorkletNode(audioCtx, 'noise-generator');
-        //noiseGenerator.connect(audioCtx.destination);
+            const noiseGenerator = new AudioWorkletNode(audioCtx, 'noise-generator');
+          console.log(source.connect(noiseGenerator));
+            source.connect(noiseGenerator).connect(audioCtx.destination);
+            source.start();
 
-        // Connect the oscillator to 'amplitude' AudioParam.
-      //  let paramAmp = noiseGenerator.parameters.get('amplitude');
-       // source.connect(modGain).connect(paramAmp);
-
-        // modulator.frequency.value = 0.5;
-        // modGain.gain.value = 0.75;
-
-         source.connect(noiseGenerator);
-         noiseGenerator.connect(audioCtx.destination);
-         source.start();
       
       });
 
