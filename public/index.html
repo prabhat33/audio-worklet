@@ -41,6 +41,10 @@
     </div>
 
     <pre></pre>
+    <div style="max-width:800px;position:absolute;left:30%">
+      <h2>Graphical representation</h2>
+      <canvas id="myChart" width="800"></canvas>
+    </div>
 
     <script>
       const myScript = document.querySelector("script");
@@ -48,11 +52,13 @@
       const playButton = document.getElementById("play");
       const pauseButton = document.getElementById("pause");
       const stopButton = document.getElementById("stop");
+      var ctx = document.getElementById("myChart").getContext("2d");
 
       // Create AudioContext and buffer source
       let audioCtx;
       let source;
       let rAF;
+      let chart;
 
       function audioWorkletInit() {
         $("#apiType").text("Audio worklet");
@@ -192,6 +198,8 @@
           } else if ($("#scriptprocessor").prop("checked")) {
             init();
           }
+
+          loadChart();
         }
       };
 
@@ -213,7 +221,7 @@
       };
 
       //output the script into the pre element
-      myPre.innerHTML = myScript.innerHTML;
+      // myPre.innerHTML = myScript.innerHTML;
 
       function outputTimestamps() {
         let ts = audioCtx.getOutputTimestamp();
@@ -223,7 +231,51 @@
             " | Performance time: " +
             ts.performanceTime
         );
+
+        addData(chart, [ts.contextTime], [ts.performanceTime])
         rAF = requestAnimationFrame(outputTimestamps);
+      }
+
+      function addData(chart, label, data) {
+        chart.data.labels.push(label);
+        chart.data.datasets.forEach(dataset => {
+          dataset.data.push(data);
+        });
+        chart.update();
+      }
+
+      function removeData(chart) {
+        chart.data.labels.pop();
+        chart.data.datasets.forEach(dataset => {
+          dataset.data.pop();
+        });
+        chart.update();
+      }
+
+      function loadChart() {
+       
+         chart = new Chart(ctx, {
+          // The type of chart we want to create
+          type: "line",
+
+          // The data for our dataset
+          data: {
+            labels: [
+             
+            ],
+            datasets: [
+              {
+                label: "Context Time VS Performance Time",
+                // backgroundColor: "rgb(255, 99, 132)",
+                borderColor: "rgb(255, 99, 132)",
+                data: []
+              }
+            ]
+          },
+
+          // Configuration options go here
+          options: {}
+        });
       }
     </script>
   </body>
@@ -232,4 +284,5 @@
     integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
     crossorigin="anonymous"
   ></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
 </html>
