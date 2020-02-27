@@ -15,10 +15,30 @@
 
   <body>
     <h1>Currently using <span id="apiType">----------</span></h1>
+    <code class="hljs xml">
+      <fieldset>
+        <legend>Choose an Audio processing mechanism</legend>
+        <input
+          type="radio"
+          id="worklet"
+          name="mechanism"
+          checked="checked"
+          value="worklet"
+        />Audio worklet<br />
+        <input
+          type="radio"
+          id="scriptprocessor"
+          name="mechanism"
+          value="scriptprocessor"
+        />Script processor
+      </fieldset>
+    </code>
 
-    <button id="play">Play song</button>
-    <button id="pause">Pause song</button>
-    <button id="stop">Stop song</button>
+    <div style="margin-top:10px;">
+      <button id="play">Play song</button>
+      <button id="pause">Pause song</button>
+      <button id="stop">Stop song</button>
+    </div>
 
     <pre></pre>
 
@@ -167,8 +187,11 @@
       // wire up play button
       playButton.onclick = function() {
         if (!audioCtx) {
-         // init();
-          audioWorkletInit();
+          if ($("#worklet").prop("checked")) {
+            audioWorkletInit();
+          } else if ($("#scriptprocessor").prop("checked")) {
+            init();
+          }
         }
       };
 
