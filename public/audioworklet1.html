@@ -1,0 +1,134 @@
+<html>
+  <head>
+    <title>Sine wave audio with Audio worklet</title>
+    <!-- <base href="/" /> -->
+    <style>
+      #buttons-container {
+        position: absolute;
+        top: 100px;
+        left: 100px;
+      }
+
+      button {
+        width: 100px;
+        height: 50px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="buttons-container">
+      <button onclick="play()" id="playbtn">Play</button>
+      <!-- <audio id="audio" controls onplay="playerStarted()" ontimeupdate="timeupdate(this)">
+
+            <source src="./50910__rutgermuller__in-car-driving.wav">
+            Your browser does not support the audio element.
+        </audio> -->
+      <button onclick="pause()" id="pausebtn">Stop</button>
+
+      <p id="result"></p>
+      <p id="result1"></p>
+      <p id="result2"></p>
+      <p id="result4"></p>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.min.js"
+      integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+      crossorigin="anonymous"
+    ></script>
+    <script src="./buffer.js"></script>
+    <script>
+      function timeupdate(e) {
+        console.log("updated time");
+        console.log(e.currentTime);
+      }
+
+      function playerStarted(e) {
+        console.log("player started");
+      }
+      var context = new (window.AudioContext || window.webkitAudioContext)();
+      var bufferLoader;
+
+      var audio = document.getElementById("audio");
+
+      bufferLoader = new BufferLoader(
+        context,
+        ["./50910__rutgermuller__in-car-driving.wav"],
+        finishedLoading
+      );
+
+      bufferLoader.load();
+
+      var source1;
+
+      var scriptNode = context.createScriptProcessor(4096, 1, 1);
+      $("#result4").text(`Buffer size: ${scriptNode.bufferSize}`);
+
+      function finishedLoading(bufferList) {
+        source1 = context.createBufferSource();
+        source1.buffer = bufferList[0];
+      }
+
+      function play() {
+        source1.connect(scriptNode);
+        source1.connect(context.destination);
+        source1.start();
+        let ts = context.getOutputTimestamp();
+        $("#result").text(`Base latency: ${context.baseLatency}`)
+        $("#result1").text(`Context time: ${ts.contextTime}`)
+        $("#result2").text(`Performance time: ${ts.performanceTime}`)
+
+
+        // context.audioWorklet.addModule("bypass-processor.js").then(_ => {
+        //   const bypasser = new AudioWorkletNode(context, "bypass-processor");
+        //   source1.connect(bypasser).connect(context.destination);
+        //   source1.start(0);
+        //   let ts = context.getOutputTimestamp();
+        //   $("#result").text(`Worklet : Base latency: ${context.baseLatency}`);
+        //   $("#result1").text(`Worklet: Context time: ${ts.contextTime}`);
+        //   $("#result2").text(
+        //     `Worklet: Performance time: ${ts.performanceTime}`
+        //   );
+        // });
+      }
+
+      // Give the node a function to process audio events
+      scriptNode.onaudioprocess = function(audioProcessingEvent) {
+
+        console.log("the inside");
+        console.log(audioProcessingEvent);
+        // The input buffer is the song we loaded earlier
+        var inputBuffer = audioProcessingEvent.inputBuffer;
+
+        // The output buffer contains the samples that will be modified and played
+        var outputBuffer = audioProcessingEvent.outputBuffer;
+
+        // Loop through the output channels (in this case there is only one)
+        for (
+          var channel = 0;
+          channel < outputBuffer.numberOfChannels;
+          channel++
+        ) {
+          var inputData = inputBuffer.getChannelData(channel);
+          var outputData = outputBuffer.getChannelData(channel);
+
+          // Loop through the 4096 samples
+          for (var sample = 0; sample < inputBuffer.length; sample++) {
+            // make output equal to the same as the input
+            outputData[sample] = inputData[sample];
+
+            // add noise to each output sample
+            outputData[sample] += (Math.random() * 2 - 1) * 0.2;
+          }
+        }
+      };
+
+      function pause() {
+        source1.stop();
+        //source1.disconnect(scriptNode);
+       // scriptNode.disconnect(context.destination);
+      }
+    </script>
+  </body>
+</html>

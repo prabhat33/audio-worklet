@@ -20,6 +20,7 @@ class BypassProcessor extends AudioWorkletProcessor {
 
         for (let channel = 0; channel < output.length; ++channel) {
             output[channel].set(input[channel]);
+
         }
 
         return true;

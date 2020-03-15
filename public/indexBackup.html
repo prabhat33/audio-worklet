@@ -1,47 +1,316 @@
+<!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width" />
 
-<head>
-    <title>Sine wave audio</title>
-    <style>
-        button{width:100px;height:50px}
-        #buttons-container{position: absolute; top: 100px; left: 100px;}
-    
-    </style>
-</head>
+    <title>Script processor node and Audio worklet node example</title>
 
-<body>
-    <div id="buttons-container">
-            <button onclick="play()" id="playbtn">Play</button>
-            <button onclick="pause()" id="pausebtn">Pause</button>
-            <button onclick="play()" id="playbtn">Stop</button>
+    <link rel="stylesheet" href="" />
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
 
+  <body>
+    <h1>Currently using <span id="apiType">----------</span></h1>
+    <code class="hljs xml">
+      <fieldset>
+        <legend>Choose an Audio processing mechanism</legend>
+        <input
+          type="radio"
+          id="worklet"
+          name="mechanism"
+          checked="checked"
+          value="worklet"
+        />Audio worklet<br />
+        <input
+          type="radio"
+          id="scriptprocessor"
+          name="mechanism"
+          value="scriptprocessor"
+        />Script processor
+      </fieldset>
+    </code>
+
+    <div style="margin-top:10px;">
+      <button id="play">Play song</button>
+      <button id="pause">Pause song</button>
+      <button id="stop">Stop song</button>
     </div>
-  
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+
+    <pre></pre>
+    <div style="max-width:800px;position:absolute;left:30%">
+      <h2>Graphical representation of Context Time Vs Performance Time</h2>
+      <canvas id="myChart" width="800"></canvas>
+    </div>
+
     <script>
-        var context = new AudioContext()
-        var frequency = 440.0
-        var o, g;
+      const myScript = document.querySelector("script");
+      const myPre = document.querySelector("pre");
+      const playButton = document.getElementById("play");
+      const pauseButton = document.getElementById("pause");
+      const stopButton = document.getElementById("stop");
+      var ctx = document.getElementById("myChart").getContext("2d");
 
-        function play() {
-            o = context.createOscillator();
-            g = context.createGain()
-            o.type = "sine"
-            o.frequency.value = frequency
-            o.connect(g)
-            g.connect(context.destination)
-            o.start()
+      // Create AudioContext and buffer source
+      let audioCtx;
+      let source;
+      let audioCtx2;
+      let source2;
+      let rAF;
+      let chart;
+
+      function audioWorkletInit() {
+        $("#apiType").text("Audio worklet");
+        audioCtx2 = new AudioContext();
+        source2 = audioCtx2.createBufferSource();
+
+        // load in an audio track via XHR and decodeAudioData
+
+        audioCtx2.audioWorklet.addModule("./noise-generator.js").then(() => {
+          const noiseGenerator = new AudioWorkletNode(
+            audioCtx2,
+            "noise-generator"
+          );
+          source2.connect(audioCtx2.destination);
+          noiseGenerator.connect(audioCtx2.destination);
+          source2.start();
+          rAF = requestAnimationFrame(outputTimestamps);
+        });
+
+        // // When the buffer source stops playing, disconnect everything
+        // source.onended = function() {
+        //   source.disconnect(scriptNode);
+        //   scriptNode.disconnect(audioCtx.destination);
+        // }
+      }
+
+      function init() {
+        $("#apiType").text("Script Processor");
+        audioCtx = new AudioContext();
+        source = audioCtx.createBufferSource();
+
+        // Create a ScriptProcessorNode with a bufferSize of 4096 and a single input and output channel
+        let scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        console.log(scriptNode.bufferSize);
+
+        // load in an audio track via XHR and decodeAudioData
+
+       
+        // Give the node a function to process audio events
+        scriptNode.onaudioprocess = function(audioProcessingEvent) {
+          // The input buffer is the song we loaded earlier
+          let inputBuffer = audioProcessingEvent.inputBuffer;
+
+          // The output buffer contains the samples that will be modified and played
+          let outputBuffer = audioProcessingEvent.outputBuffer;
+
+          // Loop through the output channels (in this case there is only one)
+          for (
+            let channel = 0;
+            channel < outputBuffer.numberOfChannels;
+            channel++
+          ) {
+            let inputData = inputBuffer.getChannelData(channel);
+            let outputData = outputBuffer.getChannelData(channel);
+
+            // Loop through the 4096 samples
+            for (let sample = 0; sample < inputBuffer.length; sample++) {
+              // make output equal to the same as the input
+              outputData[sample] = inputData[sample];
+
+              // add noise to each output sample
+              outputData[sample] += (Math.random() * 2 - 1) * 0.2;
+            }
+          }
+        };
 
 
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+        source.start();
+        rAF = requestAnimationFrame(outputTimestamps);
+
+        // When the buffer source stops playing, disconnect everything
+        source.onended = function() {
+          source.disconnect(scriptNode);
+          scriptNode.disconnect(audioCtx.destination);
+        };
+      }
+
+      function getData() {
+          request = new XMLHttpRequest();
+          request.open(
+            "GET",
+            "./50910__rutgermuller__in-car-driving.wav",
+            // "./roddy-ricch-the-box.mp3",
+            true
+          );
+          request.responseType = "arraybuffer";
+          request.onload = function() {
+            let audioData = request.response;
+           
+            audioCtx.decodeAudioData(
+              audioData,
+              function(buffer) {
+                myBuffer = buffer;
+                source.buffer = myBuffer;
+                console.log("Processor audio");
+                console.log(audioData);
+
+              },
+              function(e) {
+                "Error with decoding audio data" + e.err;
+              }
+            );
+
+            audioCtx2.decodeAudioData(
+              audioData,
+              function(buffer) {
+                myBuffer = buffer;
+                source2.buffer = myBuffer;
+                console.log("Audio worklet audio");
+                console.log(audioData);
+
+
+              },
+              function(e) {
+                "Error with decoding audio data" + e.err;
+              }
+            );
+          };
+          request.send();
         }
 
-        function pause() {
-            g.gain.exponentialRampToValueAtTime(
-                    0.00001, context.currentTime + 0.04
-                )
-                // o.stop(0);
+
+      // wire up play button
+      playButton.onclick = function() {
+        if (!audioCtx && !audioCtx2) {
+        //   if ($("#worklet").prop("checked")) {
+        //     audioWorkletInit();
+        //   } else if ($("#scriptprocessor").prop("checked")) {
+        //     init();
+        //   }
+        getData();
+
+         init();
+
+        audioWorkletInit();
+
+          loadChart();
         }
+      };
+
+      pauseButton.onclick = function() {
+        let that = this;
+        if (audioCtx.state === "running") {
+          audioCtx.suspend().then(function() {
+            $(that).html("Resume song");
+          });
+          audioCtx2.suspend().then(function() {
+            $(that).html("Resume song");
+          });
+        } else if (audioCtx.state === "suspended") {
+          audioCtx.resume().then(function() {
+            $(that).html("Pause song");
+          });
+          audioCtx2.resume().then(function() {
+            $(that).html("Pause song");
+          });
+        }
+      };
+
+      stopButton.onclick = function() {
+        cancelAnimationFrame(rAF);
+      };
+
+      //output the script into the pre element
+      // myPre.innerHTML = myScript.innerHTML;
+
+      function outputTimestamps() {
+        let ts = audioCtx.getOutputTimestamp();
+        let ts2 = audioCtx2.getOutputTimestamp();
+        // console.log(
+        //   "Context time: " +
+        //     ts.contextTime +
+        //     " | Performance time: " +
+        //     ts.performanceTime
+        // );
+        var difference = function (a, b) { return Math.abs(a - b); }
+        if(Math.floor(ts.contextTime) == Math.floor(ts2.contextTime))
+        addData(chart, [Math.floor(ts.contextTime)], [[ts.performanceTime],[ts2.performanceTime]])
+        rAF = requestAnimationFrame(outputTimestamps);
+      }
+
+      function addData(chart, label, data) {
+        
+         // if((difference(label[0][0]) - difference(label[1][0]))< 1.0){
+            chart.data.labels.push(label[0]);
+            chart.data.datasets.forEach((dataset,index) => {
+            dataset.data.push(data[index]);
+            });
+            chart.update();
+        //  }
+        
+      }
+
+      function loadChart() {
+       
+         chart = new Chart(ctx, {
+          // The type of chart we want to create
+          type: "line",
+
+          // The data for our dataset
+          data: {
+            labels: [
+             
+            ],
+            datasets: [
+              {
+                label: "Script processor",
+               // backgroundColor: 'rgb(255, 99, 132)',
+				borderColor: 'rgb(255, 99, 132)',
+                data: []
+              },
+              {
+                label: "Audio worklet",
+               // backgroundColor: 'rgb(255, 99, 132)',
+				borderColor: 'rgb(54, 162, 235)',
+                data: []
+              },
+
+            ]
+          },
+
+          // Configuration options go here
+          options: {
+            scales: {
+					xAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Context Time'
+						}
+					}],
+					yAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Performance time'
+						}
+					}]
+				}
+          }
+        });
+      }
     </script>
-</body>
-
+  </body>
+  <script
+    src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+    crossorigin="anonymous"
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
 </html>

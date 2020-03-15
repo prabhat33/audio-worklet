@@ -72,6 +72,7 @@
           request.open(
             "GET",
             "./50910__rutgermuller__in-car-driving.wav",
+            // "./roddy-ricch-the-box.mp3",
             true
           );
           request.responseType = "arraybuffer";
@@ -128,6 +129,7 @@
           request.open(
             "GET",
             "./50910__rutgermuller__in-car-driving.wav",
+            // "./roddy-ricch-the-box.mp3",
             true
           );
           request.responseType = "arraybuffer";
@@ -231,9 +233,14 @@
             " | Performance time: " +
             ts.performanceTime
         );
+        console.log("the log");
+        console.log(ts.contextTime);
+       if(ts.contextTime!=0){
+          addData(chart, [ts.contextTime], [ts.performanceTime])
+       }
+       rAF = requestAnimationFrame(outputTimestamps);
 
-        addData(chart, [ts.contextTime], [ts.performanceTime])
-        rAF = requestAnimationFrame(outputTimestamps);
+       
       }
 
       function addData(chart, label, data) {
@@ -266,15 +273,32 @@
             datasets: [
               {
                 label: "Context Time VS Performance Time",
-                // backgroundColor: "rgb(255, 99, 132)",
-                borderColor: "rgb(255, 99, 132)",
+               // backgroundColor: 'rgb(255, 99, 132)',
+				borderColor: 'rgb(255, 99, 132)',
                 data: []
               }
             ]
           },
 
           // Configuration options go here
-          options: {}
+          options: {
+            scales: {
+					xAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Context Time'
+						}
+					}],
+					yAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Performance time'
+						}
+					}]
+				}
+          }
         });
       }
     </script>
