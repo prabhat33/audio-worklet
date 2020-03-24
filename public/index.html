@@ -11,13 +11,17 @@
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+    <style>
+    .gain-node-holder{margin-top:7px}
+    .gain-node-holder span{margin-left:5px}
+    </style>
   </head>
 
   <body>
     <h1>Currently using <span id="apiType">----------</span></h1>
     <code class="hljs xml">
       <fieldset>
-        <legend>Choose an Audio processing mechanism</legend>
+        <legend>Choose an Audio processing mechanism and Audio gain</legend>
         <input
           type="radio"
           id="worklet"
@@ -31,7 +35,21 @@
           name="mechanism"
           value="scriptprocessor"
         />Script processor
+       <br/>
+       <div class="gain-node-holder">
+        <input
+        type="number"
+        id="gainnode"
+        name="gainnode"
+        step="0.1" 
+         min="0"
+          max="1"
+        value="1"
+      /><span>Gain Node</span>
+       </div>
+       
       </fieldset>
+      
     </code>
 
     <div style="margin-top:10px;">
@@ -100,8 +118,14 @@
             audioCtx,
             "noise-generator"
           );
-          source.connect(audioCtx.destination);
-          noiseGenerator.connect(audioCtx.destination);
+           var gainNode = audioCtx.createGain()
+            gainNode.gain.value = $("#gainnode").val() // 10 %
+            gainNode.connect(audioCtx.destination)
+        
+          // source.connect(audioCtx.destination);
+          // noiseGenerator.connect(audioCtx.destination);
+          source.connect(gainNode);
+          noiseGenerator.connect(gainNode);
           source.start();
           rAF = requestAnimationFrame(outputTimestamps);
         });
@@ -179,10 +203,15 @@
         };
 
         getData();
-
+        
+        var gainNode = audioCtx.createGain()
+        gainNode.gain.value = $("#gainnode").val() // 10 %
+        gainNode.connect(audioCtx.destination)
         source.connect(scriptNode);
-        scriptNode.connect(audioCtx.destination);
+        // scriptNode.connect(audioCtx.destination);
+        scriptNode.connect(gainNode);
         source.start();
+       
         rAF = requestAnimationFrame(outputTimestamps);
 
         // When the buffer source stops playing, disconnect everything
