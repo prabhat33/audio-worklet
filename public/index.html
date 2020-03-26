@@ -12,8 +12,12 @@
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
     <style>
-    .gain-node-holder{margin-top:7px}
-    .gain-node-holder span{margin-left:5px}
+      .gain-node-holder {
+        margin-top: 7px;
+      }
+      .gain-node-holder span {
+        margin-left: 5px;
+      }
     </style>
   </head>
 
@@ -35,21 +39,23 @@
           name="mechanism"
           value="scriptprocessor"
         />Script processor
-       <br/>
-       <div class="gain-node-holder">
-        <input
-        type="number"
-        id="gainnode"
-        name="gainnode"
-        step="0.1" 
-         min="0"
-          max="1"
-        value="1"
-      /><span>Gain Node</span>
-       </div>
-       
+        <select id="sound-source">
+          <option value="1">Oscillator</option>
+          <option value="2">Audio Buffer</option> </select
+        >Sound source
+        <br />
+        <div class="gain-node-holder">
+          <input
+            type="number"
+            id="gainnode"
+            name="gainnode"
+            step="0.1"
+            min="0"
+            max="1"
+            value="1"
+          /><span>Gain Node</span>
+        </div>
       </fieldset>
-      
     </code>
 
     <div style="margin-top:10px;">
@@ -77,6 +83,7 @@
       let source;
       let rAF;
       let chart;
+      let t1, t2;
 
       function audioWorkletInit() {
         $("#apiType").text("Audio worklet");
@@ -114,19 +121,28 @@
         getData();
 
         audioCtx.audioWorklet.addModule("./noise-generator.js").then(() => {
+          const oscillator = new OscillatorNode(audioCtx);
           const noiseGenerator = new AudioWorkletNode(
             audioCtx,
             "noise-generator"
           );
-           var gainNode = audioCtx.createGain()
-            gainNode.gain.value = $("#gainnode").val() // 10 %
-            gainNode.connect(audioCtx.destination)
-        
-          // source.connect(audioCtx.destination);
-          // noiseGenerator.connect(audioCtx.destination);
-          source.connect(gainNode);
-          noiseGenerator.connect(gainNode);
-          source.start();
+
+          var gainNode = audioCtx.createGain();
+          gainNode.gain.value = $("#gainnode").val(); // 10 %
+          gainNode.connect(audioCtx.destination);
+
+          if ($("#sound-source").val() == 1) {
+            oscillator.connect(gainNode);
+            noiseGenerator.connect(gainNode);
+            oscillator.start();
+          } else {
+            // source.connect(audioCtx.destination);
+            // noiseGenerator.connect(audioCtx.destination);
+            source.connect(gainNode);
+            noiseGenerator.connect(gainNode);
+            source.start();
+          }
+
           rAF = requestAnimationFrame(outputTimestamps);
         });
 
@@ -203,15 +219,25 @@
         };
 
         getData();
-        
-        var gainNode = audioCtx.createGain()
-        gainNode.gain.value = $("#gainnode").val() // 10 %
-        gainNode.connect(audioCtx.destination)
-        source.connect(scriptNode);
-        // scriptNode.connect(audioCtx.destination);
-        scriptNode.connect(gainNode);
-        source.start();
-       
+
+        const oscillator = new OscillatorNode(audioCtx);
+        var gainNode = audioCtx.createGain();
+        gainNode.gain.value = $("#gainnode").val(); // 10 %
+        gainNode.connect(audioCtx.destination);
+
+        if ($("#sound-source").val() == 1) {
+            oscillator.connect(scriptNode);
+            oscillator.connect(gainNode);
+            oscillator.start();
+          } else {
+            // source.connect(audioCtx.destination);
+            // noiseGenerator.connect(audioCtx.destination);
+            source.connect(scriptNode);
+            source.connect(gainNode);
+            source.start();
+          }
+
+
         rAF = requestAnimationFrame(outputTimestamps);
 
         // When the buffer source stops playing, disconnect everything
@@ -220,16 +246,20 @@
           scriptNode.disconnect(audioCtx.destination);
         };
       }
-
       // wire up play button
       playButton.onclick = function() {
+        t1 = performance.now();
+
         if (!audioCtx) {
           if ($("#worklet").prop("checked")) {
+            // console.time("audio-worklet");
             audioWorkletInit();
+            //  console.timeEnd("audio-worklet");
           } else if ($("#scriptprocessor").prop("checked")) {
+            //  console.time("script-processor");
             init();
+            //  console.timeEnd("script-processor");
           }
-
           loadChart();
         }
       };
@@ -256,20 +286,24 @@
 
       function outputTimestamps() {
         let ts = audioCtx.getOutputTimestamp();
-        console.log(
-          "Context time: " +
-            ts.contextTime +
-            " | Performance time: " +
-            ts.performanceTime
-        );
-        console.log("the log");
-        console.log(ts.contextTime);
-       if(ts.contextTime!=0){
-          addData(chart, [ts.contextTime], [ts.performanceTime])
-       }
-       rAF = requestAnimationFrame(outputTimestamps);
-
-       
+        // console.log(
+        //   "Context time: " +
+        //     ts.contextTime +
+        //     " | Performance time: " +
+        //     ts.performanceTime
+        // );
+        // console.log("the log");
+        // console.log(ts.contextTime);
+        if (ts.contextTime != 0) {
+          addData(chart, [ts.contextTime], [ts.performanceTime]);
+        }
+        if (audioCtx.currentTime > 1) {
+          t2 = performance.now();
+          console.log(
+            "Call to doSomething took " + (t2 - t1) + " milliseconds."
+          );
+        }
+        rAF = requestAnimationFrame(outputTimestamps);
       }
 
       function addData(chart, label, data) {
@@ -289,21 +323,18 @@
       }
 
       function loadChart() {
-       
-         chart = new Chart(ctx, {
+        chart = new Chart(ctx, {
           // The type of chart we want to create
           type: "line",
 
           // The data for our dataset
           data: {
-            labels: [
-             
-            ],
+            labels: [],
             datasets: [
               {
                 label: "Context Time VS Performance Time",
-               // backgroundColor: 'rgb(255, 99, 132)',
-				borderColor: 'rgb(255, 99, 132)',
+                // backgroundColor: 'rgb(255, 99, 132)',
+                borderColor: "rgb(255, 99, 132)",
                 data: []
               }
             ]
@@ -312,21 +343,25 @@
           // Configuration options go here
           options: {
             scales: {
-					xAxes: [{
-						display: true,
-						scaleLabel: {
-							display: true,
-							labelString: 'Context Time'
-						}
-					}],
-					yAxes: [{
-						display: true,
-						scaleLabel: {
-							display: true,
-							labelString: 'Performance time'
-						}
-					}]
-				}
+              xAxes: [
+                {
+                  display: true,
+                  scaleLabel: {
+                    display: true,
+                    labelString: "Context Time"
+                  }
+                }
+              ],
+              yAxes: [
+                {
+                  display: true,
+                  scaleLabel: {
+                    display: true,
+                    labelString: "Performance time"
+                  }
+                }
+              ]
+            }
           }
         });
       }
