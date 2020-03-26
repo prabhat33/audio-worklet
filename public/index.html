@@ -25,7 +25,7 @@
     <h1>Currently using <span id="apiType">----------</span></h1>
     <code class="hljs xml">
       <fieldset>
-        <legend>Choose an Audio processing mechanism and Audio gain</legend>
+        <legend>Choose an Audio processing mechanism , Sound Source and Audio Gain</legend>
         <input
           type="radio"
           id="worklet"
@@ -38,12 +38,13 @@
           id="scriptprocessor"
           name="mechanism"
           value="scriptprocessor"
-        />Script processor
+        />Script processor <br/><br/>
         <select id="sound-source">
           <option value="1">Oscillator</option>
           <option value="2">Audio Buffer</option> </select
-        >Sound source
-        <br />
+        > &nbsp;Sound source
+ 
+        <br/>
         <div class="gain-node-holder">
           <input
             type="number"
@@ -68,6 +69,8 @@
     <div style="max-width:800px;position:absolute;left:30%">
       <h2>Graphical representation of Context Time Vs Performance Time</h2>
       <canvas id="myChart" width="800"></canvas>
+      <h2 style="text-align: center">Waveform</h2>
+      <canvas id="data-visual" width="800"></canvas>
     </div>
 
     <script>
@@ -76,19 +79,25 @@
       const playButton = document.getElementById("play");
       const pauseButton = document.getElementById("pause");
       const stopButton = document.getElementById("stop");
+      const datactx = document.getElementById("data-visual");
+      const canvasCtx = datactx.getContext("2d");
       var ctx = document.getElementById("myChart").getContext("2d");
 
       // Create AudioContext and buffer source
       let audioCtx;
+      let analyser,bufferLength,dataArray ;
       let source;
       let rAF;
       let chart;
       let t1, t2;
+      let WIDTH=1000,HEIGHT=200;
 
       function audioWorkletInit() {
         $("#apiType").text("Audio worklet");
         audioCtx = new AudioContext();
         source = audioCtx.createBufferSource();
+        analyser= audioCtx.createAnalyser();
+
 
         // load in an audio track via XHR and decodeAudioData
 
@@ -131,16 +140,28 @@
           gainNode.gain.value = $("#gainnode").val(); // 10 %
           gainNode.connect(audioCtx.destination);
 
+            //VISUAL
+
+             analyser.fftSize = 2048;
+             bufferLength = analyser.frequencyBinCount;
+             dataArray = new Uint8Array(bufferLength);
+             canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
+
+
           if ($("#sound-source").val() == 1) {
             oscillator.connect(gainNode);
+            oscillator.connect(analyser);
             noiseGenerator.connect(gainNode);
             oscillator.start();
+            draw();
           } else {
             // source.connect(audioCtx.destination);
             // noiseGenerator.connect(audioCtx.destination);
             source.connect(gainNode);
+            source.connect(analyser);
             noiseGenerator.connect(gainNode);
             source.start();
+            draw();
           }
 
           rAF = requestAnimationFrame(outputTimestamps);
@@ -157,6 +178,7 @@
         $("#apiType").text("Script Processor");
         audioCtx = new AudioContext();
         source = audioCtx.createBufferSource();
+        analyser= audioCtx.createAnalyser();
 
         // Create a ScriptProcessorNode with a bufferSize of 4096 and a single input and output channel
         let scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
@@ -225,18 +247,35 @@
         gainNode.gain.value = $("#gainnode").val(); // 10 %
         gainNode.connect(audioCtx.destination);
 
+          //VISUAL
+
+             analyser.fftSize = 2048;
+             bufferLength = analyser.frequencyBinCount;
+             dataArray = new Uint8Array(bufferLength);
+             canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
+
         if ($("#sound-source").val() == 1) {
             oscillator.connect(scriptNode);
-            oscillator.connect(gainNode);
+            oscillator.connect(analyser);
+            scriptNode.connect(gainNode);
             oscillator.start();
+
+            draw();
           } else {
             // source.connect(audioCtx.destination);
             // noiseGenerator.connect(audioCtx.destination);
             source.connect(scriptNode);
-            source.connect(gainNode);
+            source.connect(analyser);
+            scriptNode.connect(gainNode);  
             source.start();
+
+            draw();
           }
 
+
+        // scriptNode.connect(audioCtx.destination);
+        // scriptNode.connect(gainNode);
+        // source.start();
 
         rAF = requestAnimationFrame(outputTimestamps);
 
@@ -283,6 +322,7 @@
 
       //output the script into the pre element
       // myPre.innerHTML = myScript.innerHTML;
+      let hasLoggedPerformance=false;
 
       function outputTimestamps() {
         let ts = audioCtx.getOutputTimestamp();
@@ -297,11 +337,12 @@
         if (ts.contextTime != 0) {
           addData(chart, [ts.contextTime], [ts.performanceTime]);
         }
-        if (audioCtx.currentTime > 1) {
+        if ((audioCtx.currentTime > 1) && !hasLoggedPerformance) {
           t2 = performance.now();
           console.log(
-            "Call to doSomething took " + (t2 - t1) + " milliseconds."
+            "T2- T1 =  " + (t2 - t1) + " milliseconds."
           );
+          hasLoggedPerformance=true;
         }
         rAF = requestAnimationFrame(outputTimestamps);
       }
@@ -320,6 +361,35 @@
           dataset.data.pop();
         });
         chart.update();
+      }
+
+
+      function draw() {
+        var drawVisual = requestAnimationFrame(draw);
+        analyser.getByteTimeDomainData(dataArray);
+        canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+        canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+        canvasCtx.lineWidth = 2;
+        canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+        canvasCtx.beginPath();
+        var sliceWidth = WIDTH * 1.0 / bufferLength;
+        var x = 0;
+        for(var i = 0; i < bufferLength; i++) {
+   
+          var v = dataArray[i] / 128.0;
+          var y = v * HEIGHT/2;
+
+          if(i === 0) {
+            canvasCtx.moveTo(x, y);
+          } else {
+            canvasCtx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        canvasCtx.lineTo(WIDTH, HEIGHT/2);
+        canvasCtx.stroke();
       }
 
       function loadChart() {
