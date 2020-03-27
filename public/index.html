@@ -40,8 +40,9 @@
           value="scriptprocessor"
         />Script processor <br/><br/>
         <select id="sound-source">
+            <option value="2">Audio Buffer</option> 
           <option value="1">Oscillator</option>
-          <option value="2">Audio Buffer</option> </select
+          </select
         > &nbsp;Sound source
  
         <br/>
@@ -105,8 +106,8 @@
           request = new XMLHttpRequest();
           request.open(
             "GET",
-            "./50910__rutgermuller__in-car-driving.wav",
-            // "./roddy-ricch-the-box.mp3",
+            //"./50910__rutgermuller__in-car-driving.wav",
+             "./beware.mp3",
             true
           );
           request.responseType = "arraybuffer";
@@ -190,8 +191,8 @@
           request = new XMLHttpRequest();
           request.open(
             "GET",
-            "./50910__rutgermuller__in-car-driving.wav",
-            // "./roddy-ricch-the-box.mp3",
+            // "./50910__rutgermuller__in-car-driving.wav",
+            "./beware.mp3",
             true
           );
           request.responseType = "arraybuffer";
@@ -300,6 +301,7 @@
             //  console.timeEnd("script-processor");
           }
           loadChart();
+
         }
       };
 
@@ -434,6 +436,14 @@
             }
           }
         });
+      }
+      loopInterval();
+
+      function loopInterval(){
+        setInterval(function(){
+           eval("console.log('Main thread is loaded - 1')");
+           eval("console.log('Main thread is loaded - 2')");
+        },1000)
       }
     </script>
   </body>
